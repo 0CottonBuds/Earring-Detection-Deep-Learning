@@ -2,13 +2,10 @@ import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-import gdown
-import os
+from ear_extraction import extract_ear_region
 
 st.set_page_config(
-    page_title="Helmet Detection",
-    page_icon="🪖",
+    page_title="Earrings Detection",
     layout="centered"
 )
 
@@ -16,14 +13,12 @@ st.set_page_config(
 
 st.title("Earrings Detection System")
 st.markdown("""
-This app detects whether a motorcyclist is:
+This app detects whether a earring is:
 - *Male wearing earrings*
 - *Male not wearing earrings*
 - *Female wearing earrings*
 - *Female not wearing earrings*
 
-
-Trained on ~173 images across 4 classes.
 """)
 
 @st.cache_resource
@@ -41,22 +36,37 @@ class_names = ['Male wearing earrings', 'Male not wearing earrings', 'Female wea
 
 tab1, tab2 = st.tabs(["📤 Upload Image", "📹 Live Camera"])
 
+
+def prepare_model_input(image: Image.Image) -> np.ndarray:
+    ear_crop = extract_ear_region(image, target_size=(128, 128))
+    ear_array = np.array(ear_crop, dtype=np.float32) / 255.0
+    return np.expand_dims(ear_array, axis=0)
+
+
+def show_extraction_preview(image: Image.Image) -> None:
+    st.write("### Ear Extraction Preview")
+    original_column, extracted_column = st.columns(2)
+
+    with original_column:
+        st.image(image, caption="Original image", use_column_width=True)
+
+    with extracted_column:
+        extracted = extract_ear_region(image, target_size=(256, 256)).astype(np.uint8)
+        st.image(extracted, caption="Extracted ear region", use_column_width=True)
+        st.caption("This is the cropped region used for prediction.")
+
 # TAB 1: file uploader 
 with tab1:
     uploaded_file = st.file_uploader(
-        "Upload an image of a motorcyclist",
+        "Upload an image of a earring",
         type=["jpg", "jpeg", "png"]
     )
 
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
-        st.image(image, caption="Uploaded Image", use_column_width=True)
+        show_extraction_preview(image)
 
-        img = image.resize((128, 128))
-        img = img.convert('RGB') 
-        img_array = np.array(img)
-        img_array = np.expand_dims(img_array, axis=0)
-        img_array = preprocess_input(img_array)
+        img_array = prepare_model_input(image)
 
         with st.spinner("Analyzing..."):
             prediction = model.predict(img_array)
@@ -86,19 +96,15 @@ with tab1:
 
 # TAB 2: live Camera 
 with tab2:
-    st.write("Point your camera at a motorcyclist to get real-time predictions!")
+    st.write("Point your camera at a earring to get real-time predictions!")
     
     camera_photo = st.camera_input("Take a picture")
     
     if camera_photo is not None:
-        st.image(camera_photo, caption="Camera Capture", use_column_width=True)
-
         image = Image.open(camera_photo)
-        img = image.resize((128, 128))
-        img = img.convert('RGB')
-        img_array = np.array(img)
-        img_array = np.expand_dims(img_array, axis=0)
-        img_array = preprocess_input(img_array)
+        show_extraction_preview(image)
+
+        img_array = prepare_model_input(image)
 
         with st.spinner("Analyzing..."):
             prediction = model.predict(img_array)
