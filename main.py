@@ -24,7 +24,8 @@ This app detects whether a earring is:
 @st.cache_resource
 @st.cache_resource
 def load_model():
-    return tf.keras.models.load_model("cnn_classifier.h5")
+    return tf.keras.models.load_model("best_finetune.h5")
+    # return tf.keras.models.load_model("cnn_classifier.h5")
   
 # def load_model():
 #     model = tf.keras.models.load_model("helmet_detectorV3.h5")
